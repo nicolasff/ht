@@ -5,6 +5,7 @@
 #include <string.h>
 
 #define DICT_MAX_LOAD	0.75
+#define DICT_REHASH_BATCH_SIZE	20
 
 /* Hash function by Daniel J. Bernstein */
 static unsigned long
@@ -154,7 +155,7 @@ dict_rehash(struct dict *d) {
 	if(d->ht_old == NULL) {
 		return;
 	}
-	int k = 20;
+	int k = DICT_REHASH_BATCH_SIZE;
 
 	/* transfer old elements to the new HT. */
 
@@ -240,6 +241,28 @@ dict_remove(struct dict *d, char *k, size_t sz) {
 
 	d->count--;
 	return 0;
+}
 
+/* for each item, call a callback function */
+void
+dict_foreach(struct dict *d, foreach_cb fun, void *data) {
+
+	int i;
+	struct bucket *heads[2];
+
+	heads[0] = d->ht->first;
+	if(d->ht_old) {
+		heads[1] = d->ht_old->first;
+	} else {
+		heads[1] = NULL;
+	}
+
+	/* call on each HT */
+	for(i = 0; i < 2; ++i) {
+		struct bucket *b;
+		for(b = heads[i]; b; b = b->next) {
+			fun(b->k, b->sz, b->v, data);
+		}
+	}
 }
 

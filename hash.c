@@ -11,6 +11,14 @@ float now() {
 	return t.tv_sec * 1000 + t.tv_nsec / 1000000;
 }
 
+void
+print_item(char *k, size_t sz, void *v, void *p) {
+
+	(void)sz;
+	(void)p;
+	printf("k=[%s], v=[%s]\n", k, (char*)v);
+}
+
 int
 main() {
 
@@ -40,6 +48,11 @@ main() {
 	t0 = now();
 	for(i = 0; i < count; ++i) {
 		dict_add(d, KEY(i), strlen(KEY(i)), VAL(i));
+		/*
+		if(i == 100) {
+			dict_foreach(d, print_item, NULL);
+		}
+		*/
 	}
 
 	t1 = now();

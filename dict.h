@@ -46,4 +46,9 @@ dict_add(struct dict *d, char *k, size_t sz, void *v);
 void*
 dict_get(struct dict *d, char *k, size_t sz);
 
+/* key, key size, value, "data" extra */
+typedef void (*foreach_cb)(char *, size_t, void*, void*);
+void
+dict_foreach(struct dict *d, foreach_cb fun, void *data);
+
 #endif /* DICT_H */
