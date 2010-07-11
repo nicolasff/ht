@@ -31,23 +31,26 @@ struct dict {
 };
 
 
+/* Create a new dictionary */
 struct dict *
 dict_new(int sz);
 
+/* Delete a dictionary */
 void
 dict_free(struct dict *d);
 
-void
-dict_resize(struct dict *d, size_t sz);
-
+/* Add d[k] = v, with sz = length(k) */
 void
 dict_add(struct dict *d, char *k, size_t sz, void *v);
 
+/* retrieve d[k], with sz = length(k) */
 void*
 dict_get(struct dict *d, char *k, size_t sz);
 
 /* key, key size, value, "data" extra */
 typedef void (*foreach_cb)(char *, size_t, void*, void*);
+
+/* run f(key, key size, value, data) on each item. */
 void
 dict_foreach(struct dict *d, foreach_cb fun, void *data);
 

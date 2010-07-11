@@ -1,7 +1,7 @@
 OUT=hash
 OBJS=hash.o dict.o
 CFLAGS=-O3 -Wall -Wextra
-LDFLAGS=-levent
+LDFLAGS=-lrt
 
 all: $(OUT) Makefile
 
