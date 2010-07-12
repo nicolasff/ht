@@ -1,6 +1,6 @@
 OUT=hash
 OBJS=hash.o dict.o
-CFLAGS=-O3 -Wall -Wextra
+CFLAGS=-O3 -Wall -Wextra -Werror -pedantic
 LDFLAGS=-lrt
 
 all: $(OUT) Makefile
@@ -10,6 +10,9 @@ $(OUT): $(OBJS) Makefile
 
 %.o: %.c %.h Makefile
 	$(CC) -c $(CFLAGS) -o $@ $<
+
+dict.o: dict.c dict.h Makefile
+	$(CC) -c $(CFLAGS) -ansi --std=c89 -o $@ $< # make sure it works in ANSI C89
 
 %.o: %.c Makefile
 	$(CC) -c $(CFLAGS) -o $@ $<
