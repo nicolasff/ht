@@ -29,8 +29,8 @@ ht_new(int sz) {
 
 	ht->slots = calloc(sizeof(struct bucket), sz);
 	if(ht->slots == NULL) {
-		fprintf(stderr, "failed to allocate %zd bytes.\n",
-				sz * sizeof(struct bucket));
+		fprintf(stderr, "failed to allocate %d bytes.\n",
+				sz * (int)sizeof(struct bucket));
 		abort();
 	}
 
@@ -52,12 +52,15 @@ bucket_free(struct bucket *b) {
 
 /* delete a HT */
 static void
-ht_free(struct ht *ht) {
+ht_free(struct ht *ht, void (*key_free)(void*)) {
 	struct bucket *b, *tmp;
 
 	/* delete all items from the HT */
 	for(b = ht->first; b; ) {
 		tmp = b->next;
+		if(key_free) {
+			key_free(b->k);
+		}
 		bucket_free(b);
 		b = tmp;
 	}
@@ -70,9 +73,8 @@ ht_free(struct ht *ht) {
 
 /* inset into a HT */
 static struct bucket *
-ht_insert(struct ht *ht, char *k, size_t sz, void *v) {
+ht_insert(struct ht *ht, unsigned long h, char *k, size_t sz, void *v) {
 
-	unsigned long h = djb_hash(k, sz);
 	struct bucket *b, *head, *tmp;
 
 	tmp = head = b = &ht->slots[h % ht->sz];
@@ -133,6 +135,7 @@ dict_new(int sz) {
 	
 	struct dict *d = calloc(sizeof(struct dict), 1);
 	d->ht = ht_new(sz); /* a single pre-defined HT */
+	d->key_hash = djb_hash;
 
 	return d;
 }
@@ -142,8 +145,8 @@ void
 dict_free(struct dict *d) {
 
 	/* free both hash tables */
-	ht_free(d->ht);
-	if(d->ht_old) ht_free(d->ht_old);
+	ht_free(d->ht, d->key_free);
+	if(d->ht_old) ht_free(d->ht_old, d->key_free);
 
 	free(d);
 }
@@ -152,19 +155,21 @@ dict_free(struct dict *d) {
 static void
 dict_rehash(struct dict *d) {
 	
+	int k = DICT_REHASH_BATCH_SIZE;
+	struct bucket *b, *next;
+
 	if(d->ht_old == NULL) {
 		return;
 	}
-	int k = DICT_REHASH_BATCH_SIZE;
 
 	/* transfer old elements to the new HT. */
 
-	struct bucket *b, *next;
 	for(b = d->ht_old->first; b && k--;) {
 
 		struct bucket *b_new;
+		unsigned long h = d->key_hash(b->k, b->sz);
 
-		if((b_new = ht_insert(d->ht, b->k, b->sz, b->v))) {
+		if((b_new = ht_insert(d->ht, h, b->k, b->sz, b->v))) {
 			/* new used slot, add to list. */
 			ht_record_used_bucket(d->ht, b_new);
 		}
@@ -180,7 +185,7 @@ dict_rehash(struct dict *d) {
 		return;
 	}
 
-	ht_free(d->ht_old);
+	ht_free(d->ht_old, d->key_free);
 	d->ht_old = NULL;
 }
 
@@ -190,6 +195,14 @@ void
 dict_add(struct dict *d, char *k, size_t sz, void *v) {
 
 	struct bucket *b;
+	char *k_dup = k;
+	unsigned long h = d->key_hash(k, sz);
+
+	/* possibly duplicate key */
+	if(d->key_alloc) {
+		k_dup = d->key_alloc(sz);
+		memcpy(k_dup, k, sz);
+	}
 
 	/* check for important load and resize if need be. */
 	if((float)d->count / (float)d->ht->sz > DICT_MAX_LOAD) {
@@ -198,7 +211,7 @@ dict_add(struct dict *d, char *k, size_t sz, void *v) {
 		d->ht = ht_new(d->ht->sz * 2);
 	}
 
-	if((b = ht_insert(d->ht, k, sz, v))) {
+	if((b = ht_insert(d->ht, h, k_dup, sz, v))) {
 		d->count++;
 		ht_record_used_bucket(d->ht, b);
 	}
@@ -210,7 +223,7 @@ void*
 dict_get(struct dict *d, char *k, size_t sz) {
 
 	struct bucket *b;
-	unsigned long h = djb_hash(k, sz);
+	unsigned long h = d->key_hash(k, sz);
 
 	if((b = ht_get(d->ht, h, k, sz))) {
 		return b->v;
@@ -225,7 +238,7 @@ int
 dict_remove(struct dict *d, char *k, size_t sz) {
 
 	struct bucket *b = NULL;
-	unsigned long h = djb_hash(k, sz);
+	unsigned long h = d->key_hash(k, sz);
 
 	if(!(b = ht_get(d->ht, h, k, sz))) {
 		if(d->ht_old && !(b = ht_get(d->ht_old, h, k, sz))) {
@@ -233,10 +246,19 @@ dict_remove(struct dict *d, char *k, size_t sz) {
 		}
 	}
 
-	struct bucket *prev = b->prev, *next = b->next;
-	prev->next = b->next;
-	next->prev = b->prev;
+	/* re-attach elements */
+	if(b->prev) {
+		b->prev->next = b->next;
+	}
+	if(b->next) {
+		b->next->prev = b->prev;
+	}
 
+	/* possibly free duplicated key */
+	if(d->key_free) {
+		d->key_free(b->k);
+	}
+	/* remove bucket */
 	bucket_free(b);
 
 	d->count--;

@@ -11,8 +11,9 @@ $(OUT): $(OBJS) Makefile
 %.o: %.c %.h Makefile
 	$(CC) -c $(CFLAGS) -o $@ $<
 
+# make sure it works in ANSI C89
 dict.o: dict.c dict.h Makefile
-	$(CC) -c $(CFLAGS) -ansi --std=c89 -o $@ $< # make sure it works in ANSI C89
+	$(CC) -c $(CFLAGS) -ansi --std=c89 -o $@ $<
 
 %.o: %.c Makefile
 	$(CC) -c $(CFLAGS) -o $@ $<

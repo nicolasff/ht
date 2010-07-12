@@ -19,12 +19,17 @@ struct bucket {
 
 struct ht {
 	size_t sz;
+
 	struct bucket* slots;
 	struct bucket *first;
 };
 
 struct dict {
 	int count;
+
+	unsigned long (*key_hash)(char *, size_t);
+	void* (*key_alloc)(size_t);
+	void (*key_free)(void*);
 
 	struct ht *ht;
 	struct ht *ht_old;
