@@ -28,7 +28,7 @@ struct dict {
 	int count;
 
 	unsigned long (*key_hash)(char *, size_t);
-	void* (*key_alloc)(size_t);
+	char* (*key_dup)(const char *, size_t);
 	void (*key_free)(void*);
 
 	struct ht *ht;

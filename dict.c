@@ -58,9 +58,7 @@ ht_free(struct ht *ht, void (*key_free)(void*)) {
 	/* delete all items from the HT */
 	for(b = ht->first; b; ) {
 		tmp = b->next;
-		if(key_free) {
-			key_free(b->k);
-		}
+		key_free(b->k);
 		bucket_free(b);
 		b = tmp;
 	}
@@ -129,13 +127,30 @@ ht_record_used_bucket(struct ht *ht, struct bucket *b) {
 	ht->first = b;
 }
 
+
+static char*
+key_dup_default(const char *k, size_t sz) {
+	(void)sz;
+	return (char*)k;
+}
+static void
+key_free_default(void *k) {
+	(void)k;
+	return;
+}
+
+
 /* create a new dictionary */
 struct dict *
 dict_new(int sz) {
 	
 	struct dict *d = calloc(sizeof(struct dict), 1);
 	d->ht = ht_new(sz); /* a single pre-defined HT */
+
+	/* default helper functions */
 	d->key_hash = djb_hash;
+	d->key_dup = key_dup_default;
+	d->key_free = key_free_default;
 
 	return d;
 }
@@ -199,10 +214,7 @@ dict_add(struct dict *d, char *k, size_t sz, void *v) {
 	unsigned long h = d->key_hash(k, sz);
 
 	/* possibly duplicate key */
-	if(d->key_alloc) {
-		k_dup = d->key_alloc(sz);
-		memcpy(k_dup, k, sz);
-	}
+	k_dup = d->key_dup(k, sz);
 
 	/* check for important load and resize if need be. */
 	if((float)d->count / (float)d->ht->sz > DICT_MAX_LOAD) {
@@ -254,10 +266,9 @@ dict_remove(struct dict *d, char *k, size_t sz) {
 		b->next->prev = b->prev;
 	}
 
-	/* possibly free duplicated key */
-	if(d->key_free) {
-		d->key_free(b->k);
-	}
+	/* free duplicated key */
+	d->key_free(b->k);
+
 	/* remove bucket */
 	bucket_free(b);
 
