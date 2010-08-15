@@ -39,7 +39,6 @@ sdbm(char *s, size_t sz) {
 int
 main() {
 
-
 	/* speed measure */
 	float t0, t1;
 
@@ -59,6 +58,13 @@ main() {
 	char *vals = malloc(val_size * count);
 #define KEY(i) (keys + key_size * i)
 #define VAL(i) (vals + val_size * i)
+
+	/* uncomment the following to use custom functions. */
+	/*
+	d->key_dup = strndup;
+	d->key_free = free;
+	d->key_hash = sdbm;
+	*/
 
 	printf("[info] Each key has at least %d bytes of overhead.\n", (int)sizeof(struct bucket));
 
