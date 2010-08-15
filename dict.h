@@ -20,12 +20,12 @@ struct bucket {
 struct ht {
 	size_t sz;
 
-	struct bucket* slots;
+	struct bucket *slots;
 	struct bucket *first;
 };
 
 struct dict {
-	int count;
+	long count;
 
 	unsigned long (*key_hash)(char *, size_t);
 	void* (*key_alloc)(size_t);
@@ -38,7 +38,7 @@ struct dict {
 
 /* Create a new dictionary */
 struct dict *
-dict_new(int sz);
+dict_new(long sz);
 
 /* Delete a dictionary */
 void

@@ -21,21 +21,45 @@ djb_hash(char *str, size_t sz) {
 	return hash;
 }
 
+static long
+ht_next_prime(long k) {
+	long primes[] = {53, 97, 193, 389, 769, 1543, 3079, 6151, 12289,
+		24593, 49157, 98317, 196613, 393241, 786433, 1572869,
+		3145739, 6291469, 12582917, 25165843, 50331653,
+		100663319, 201326611, 402653189, 805306457, 1610612741,
+		3221225473, 4294967291};
+
+	int i;
+	long n = sizeof(primes)/sizeof(*primes);
+	for(i = n-1; i != -1; --i) {
+		if(k >= primes[i]) {
+			break;
+		}
+	}
+
+	i++;
+	return primes[i];
+}
+
 /* create a new HT */
 static struct ht *
-ht_new(int sz) {
+ht_new(long sz) {
 	struct ht *ht = calloc(sizeof(struct ht), 1);
+
+	sz = ht_next_prime(sz);
+
 	ht->sz = sz;
 
 	ht->slots = calloc(sizeof(struct bucket), sz);
 	if(ht->slots == NULL) {
-		fprintf(stderr, "failed to allocate %d bytes.\n",
-				sz * (int)sizeof(struct bucket));
+		fprintf(stderr, "failed to allocate %ld bytes.\n",
+				sz * (long)sizeof(struct bucket));
 		abort();
 	}
 
 	return ht;
 }
+
 
 static void
 bucket_free(struct bucket *b) {
@@ -131,7 +155,7 @@ ht_record_used_bucket(struct ht *ht, struct bucket *b) {
 
 /* create a new dictionary */
 struct dict *
-dict_new(int sz) {
+dict_new(long sz) {
 	
 	struct dict *d = calloc(sizeof(struct dict), 1);
 	d->ht = ht_new(sz); /* a single pre-defined HT */
@@ -155,7 +179,7 @@ dict_free(struct dict *d) {
 static void
 dict_rehash(struct dict *d) {
 	
-	int k = DICT_REHASH_BATCH_SIZE;
+	long k = DICT_REHASH_BATCH_SIZE;
 	struct bucket *b, *next;
 
 	if(d->ht_old == NULL) {
@@ -208,7 +232,7 @@ dict_add(struct dict *d, char *k, size_t sz, void *v) {
 	if((float)d->count / (float)d->ht->sz > DICT_MAX_LOAD) {
 		/* expand and replace HT */
 		d->ht_old = d->ht;
-		d->ht = ht_new(d->ht->sz * 2);
+		d->ht = ht_new(d->ht->sz + 1); /* will select next prime */
 	}
 
 	if((b = ht_insert(d->ht, h, k_dup, sz, v))) {

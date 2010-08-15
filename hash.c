@@ -39,20 +39,21 @@ sdbm(char *s, size_t sz) {
 int
 main() {
 
-	struct dict *d = dict_new(64);
+
+	/* speed measure */
+	float t0, t1;
+
+	int i;
+	int count = 1*1000*1000;
+	int key_size = 20, val_size = 20;
+
+	struct dict *d = dict_new(count);
 	/* uncomment the following to use custom functions. */
 /*
 	d->key_alloc = malloc;
 	d->key_free = free;
 	d->key_hash = sdbm;
 */
-
-	/* speed measure */
-	float t0, t1;
-
-	int i;
-	int count = 2*1000*1000;
-	int key_size = 20, val_size = 20;
 
 	char *keys = malloc(key_size * count);
 	char *vals = malloc(val_size * count);
@@ -70,6 +71,9 @@ main() {
 	printf("Adding...\n");
 	t0 = now();
 	for(i = 0; i < count; ++i) {
+		if(i != 0 && i % 100000 == 0) {
+			printf("Done %d/%d\n", i, count);
+		}
 		dict_add(d, KEY(i), 1+strlen(KEY(i)), VAL(i));
 		/*
 		if(i == 100) {
